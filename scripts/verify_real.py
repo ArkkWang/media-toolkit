@@ -32,7 +32,7 @@ def timed_recognize(self, audio):
 
 QwenBackend.recognize = timed_recognize
 try:
-    with Transcriber("models/Qwen3-ASR-1.7B") as transcriber:
+    with Transcriber("models/Qwen3-ASR-1.7B", backend="qwen") as transcriber:
         text = transcriber.transcribe(args.input)
     args.output.write_text(text, encoding="utf-8")
     report = {"elapsed_seconds": round(time.perf_counter() - started, 2),

@@ -51,13 +51,15 @@ def _chunks(stream, chunk_samples: int, overlap_samples: int) -> Iterator[np.nda
 
 
 @contextmanager
-def audio_chunks(path: str | Path) -> Iterator[Iterator[np.ndarray]]:
-    """用 with 消费分片；正常、异常、中途退出均回收 FFmpeg。"""
+def audio_chunks(path: str | Path, *, overlap_seconds: int = OVERLAP_SECONDS) -> Iterator[Iterator[np.ndarray]]:
+    """用 with 消费分片；overlap_seconds=0 返回连续音频，供 VAD 使用。"""
+    if not isinstance(overlap_seconds, int) or not 0 <= overlap_seconds < CHUNK_SECONDS:
+        raise ValueError("分片重叠秒数必须为非负整数且小于分片长度")
     source = Path(path).expanduser().resolve()
     if not source.is_file():
         raise FileNotFoundError(f"媒体文件不存在：{source}")
     command = [
-        ffmpeg_executable(), "-nostdin", "-hide_banner", "-loglevel", "error",
+        ffmpeg_executable(), "-nostdin", "-hide_banner", "-loglevel", "error", "-xerror",
         "-i", str(source), "-map", "0:a:0", "-vn", "-ac", "1", "-ar",
         str(SAMPLE_RATE), "-f", "f32le", "pipe:1",
     ]
@@ -70,7 +72,7 @@ def audio_chunks(path: str | Path) -> Iterator[Iterator[np.ndarray]]:
             nonlocal exhausted
             found = False
             for chunk in _chunks(process.stdout, CHUNK_SECONDS * SAMPLE_RATE,
-                                 OVERLAP_SECONDS * SAMPLE_RATE):
+                                 overlap_seconds * SAMPLE_RATE):
                 found = True
                 yield chunk
             code = process.wait()

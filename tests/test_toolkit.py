@@ -65,7 +65,7 @@ class TranscriberTests(unittest.TestCase):
             yield iter([np.ones(1600, dtype=np.float32)])
         backend = Backend()
         with patch("media_toolkit.transcriber.audio_chunks", fake_chunks):
-            with Transcriber("models/test") as transcriber:
+            with Transcriber("models/test", backend="qwen") as transcriber:
                 transcriber._backend = backend
                 self.assertEqual(transcriber.transcribe("test.mp4"), "测试结果。")
                 self.assertEqual(transcriber.transcribe("test.mp4"), "测试结果。")
@@ -94,7 +94,7 @@ class TranscriberTests(unittest.TestCase):
             def close(self):
                 pass
         with patch("media_toolkit.transcriber.audio_chunks", fake_chunks):
-            with Transcriber("unused") as transcriber:
+            with Transcriber("unused", backend="qwen") as transcriber:
                 transcriber._backend = Backend()
                 with self.assertRaisesRegex(RuntimeError, "推理失败"):
                     transcriber.transcribe("unused")
@@ -124,6 +124,21 @@ class FFmpegTests(unittest.TestCase):
             video.write_bytes(b"not a video")
             with self.assertRaises(MediaDecodeError):
                 with audio_chunks(video) as chunks:
+                    list(chunks)
+
+    def test_partially_decodable_corrupt_file_is_not_success(self):
+        # FFmpeg 默认可忽略损坏帧、输出部分 PCM 后仍退出 0；必须严格报错。
+        encoded = subprocess.run([
+            ffmpeg_executable(), "-v", "error", "-f", "lavfi", "-i",
+            "sine=frequency=440:sample_rate=16000:duration=3",
+            "-f", "flac", "pipe:1",
+        ], check=True, capture_output=True).stdout
+        self.assertGreater(len(encoded), 14000)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "truncated.flac"
+            source.write_bytes(encoded[:14000])
+            with self.assertRaises(MediaDecodeError):
+                with audio_chunks(source, overlap_seconds=0) as chunks:
                     list(chunks)
 
     def test_no_audio_track(self):

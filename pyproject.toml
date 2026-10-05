@@ -9,6 +9,9 @@ dependencies = [
     "onnxruntime>=1.20,<2",
     "gguf>=0.17,<1",
     "imageio-ffmpeg>=0.6,<0.7",
+    "sherpa-onnx==1.13.8",
+    # 部分平台 wheel 元数据未声明 core，显式锁定匹配的 Windows 原生运行库。
+    "sherpa-onnx-core==1.13.8",
 ]
 
 [project.scripts]
