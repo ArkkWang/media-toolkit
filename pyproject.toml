@@ -1,0 +1,28 @@
+[project]
+name = "media-toolkit"
+version = "0.1.0"
+description = "离线音视频转纯文本工具库"
+requires-python = ">=3.12,<3.14"
+license-files = ["licenses/*", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+    "numpy>=2,<3",
+    "onnxruntime>=1.20,<2",
+    "gguf>=0.17,<1",
+    "imageio-ffmpeg>=0.6,<0.7",
+]
+
+[project.scripts]
+media-toolkit = "media_toolkit.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["media_toolkit*"]
+
+[tool.setuptools.package-data]
+"media_toolkit.backends" = ["**/*.dll"]
+
+[tool.uv]
+package = true
